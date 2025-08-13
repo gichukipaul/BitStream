@@ -1,0 +1,53 @@
+# .swiftlint.yml - Clean Architecture Swift Configuration
+
+# Disable rules that can be too strict for clean architecture modularity
+disabled_rules:
+  - trailing_whitespace
+  - line_length # We'll handle readability differently
+  - force_cast # Using guard let is preferred
+  - todo # Allowed for internal TODO markers
+
+# Enable rules that reinforce clean architecture best practices
+opt_in_rules:
+  - empty_count
+  - closure_end_indentation
+  - fatal_error_message
+  - file_header
+  - first_where
+  - implicit_return
+  - sorted_imports
+  - strict_fileprivate
+  - vertical_whitespace_between_cases
+
+# Naming conventions
+identifier_name:
+  min_length: 3
+  max_length: 50
+  excluded:
+    - id
+    - URL
+    - x
+    - y
+
+# Type body length
+type_body_length:
+  warning: 200
+  error: 300
+
+# Function body length
+function_body_length:
+  warning: 40
+  error: 60
+
+# File length
+file_length:
+  warning: 400
+  error: 600
+
+# Enforce consistent code structure
+sorted_imports: warning
+vertical_whitespace:
+  max_empty_lines: 1
+
+# Swift version
+#swift_version: 5.9
