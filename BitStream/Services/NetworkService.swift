@@ -39,22 +39,16 @@ class NetworkService: ObservableObject {
     }
     
     func checkConnection() async -> Bool {
-        return await withCheckedContinuation { continuation in
+        do {
             let testURL = URL(string: "https://www.google.com")!
-            let task = URLSession.shared.dataTask(with: testURL) { _, response, error in
-                if let httpResponse = response as? HTTPURLResponse {
-                    continuation.resume(returning: httpResponse.statusCode == 200)
-                } else {
-                    continuation.resume(returning: false)
-                }
-            }
-            task.resume()
+            let (_, response) = try await URLSession.shared.data(from: testURL)
             
-            // Timeout after 5 seconds
-            DispatchQueue.global().asyncAfter(deadline: .now() + 5) {
-                task.cancel()
-                continuation.resume(returning: false)
+            if let httpResponse = response as? HTTPURLResponse {
+                return httpResponse.statusCode == 200
             }
+            return false
+        } catch {
+            return false
         }
     }
 }

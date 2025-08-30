@@ -142,12 +142,23 @@ struct MainView: View {
     private var formatSelectionView: some View {
         VStack(alignment: .leading, spacing: 8) {
             if viewModel.downloadMode == .video {
-                Text("Video Format")
+                Text("Video Quality")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                 
                 Picker("Video Format", selection: $viewModel.selectedVideoFormat) {
                     ForEach(VideoFormat.allCases) { format in
+                        Text(format.displayName).tag(format)
+                    }
+                }
+                .pickerStyle(MenuPickerStyle())
+                
+                Text("Container Format")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                
+                Picker("Container Format", selection: $viewModel.selectedContainerFormat) {
+                    ForEach(ContainerFormat.allCases) { format in
                         Text(format.displayName).tag(format)
                     }
                 }
@@ -189,7 +200,8 @@ struct MainView: View {
             if viewModel.isDownloading {
                 VStack(spacing: 8) {
                     // Progress Bar
-                    CustomProgressView(value: viewModel.downloadProgress.percentage)
+                    ProgressView(value: viewModel.downloadProgress.percentage)
+                        .progressViewStyle(LinearProgressViewStyle())
                     
                     // Progress Details
                     HStack {
@@ -293,6 +305,8 @@ struct MainView: View {
         }
     }
 }
+
+
 
 // MARK: - Custom Progress View
 struct ProgressBar: View {

@@ -16,21 +16,43 @@ enum DownloadMode: String, CaseIterable {
 enum VideoFormat: String, CaseIterable, Identifiable {
     case best = "best"
     case worst = "worst"
-    case mp4_1080 = "bv[height<=1080]+ba"
-    case mp4_720 = "bv[height<=720]+ba"
-    case mp4_480 = "bv[height<=480]+ba"
-    case webm = "bv[ext=webm]+ba[ext=webm]"
+    case video_1080 = "bv[height<=1080]+ba"
+    case video_720 = "bv[height<=720]+ba"
+    case video_480 = "bv[height<=480]+ba"
+    case video_1440 = "bv[height<=1440]+ba"
+    case video_2160 = "bv[height<=2160]+ba"
     
     var id: String { rawValue }
     
     var displayName: String {
         switch self {
-        case .best: return "Best Quality"
-        case .worst: return "Worst Quality"
-        case .mp4_1080: return "1080p MP4"
-        case .mp4_720: return "720p MP4"
-        case .mp4_480: return "480p MP4"
+        case .best: return "Best Available"
+        case .worst: return "Worst Available"
+        case .video_1080: return "1080p (Best Video + Audio)"
+        case .video_720: return "720p (Best Video + Audio)"
+        case .video_480: return "480p (Best Video + Audio)"
+        case .video_1440: return "1440p (Best Video + Audio)"
+        case .video_2160: return "4K/2160p (Best Video + Audio)"
+        }
+    }
+}
+
+enum ContainerFormat: String, CaseIterable, Identifiable {
+    case mkv = "mkv"
+    case mp4 = "mp4"
+    case webm = "webm"
+    case avi = "avi"
+    case mov = "mov"
+    
+    var id: String { rawValue }
+    
+    var displayName: String {
+        switch self {
+        case .mkv: return "MKV (Matroska)"
+        case .mp4: return "MP4"
         case .webm: return "WebM"
+        case .avi: return "AVI"
+        case .mov: return "MOV (QuickTime)"
         }
     }
 }

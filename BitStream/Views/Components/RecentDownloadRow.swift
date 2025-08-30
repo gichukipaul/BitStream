@@ -71,7 +71,6 @@ struct RecentDownloadRow: View {
     }
 }
 
-
 #Preview("Recent Download Row") {
     RecentDownloadRow(
         item: DownloadItem(
