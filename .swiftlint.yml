@@ -51,3 +51,7 @@ vertical_whitespace:
 
 # Swift version
 #swift_version: 5.9
+$(SRCROOT)/.swiftlint.yml
+$(SRCROOT)/BitStream
+$(SRCROOT)/BitStreamTests
+$(SRCROOT)/BitStreamUITests

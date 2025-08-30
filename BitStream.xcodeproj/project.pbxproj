@@ -29,30 +29,9 @@
 		DB1625D02DA187B500B8C714 /* BitStreamUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BitStreamUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		DB421DC12E4D46FA00AFA331 /* Exceptions for "BitStream" folder in "BitStreamTests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"Resources/yt-dlp",
-			);
-			target = DB1625C52DA187B500B8C714 /* BitStreamTests */;
-		};
-		DB421DC22E4D46FA00AFA331 /* Exceptions for "BitStream" folder in "BitStreamUITests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"Resources/yt-dlp",
-			);
-			target = DB1625CF2DA187B500B8C714 /* BitStreamUITests */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		DB1625B72DA187B400B8C714 /* BitStream */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				DB421DC12E4D46FA00AFA331 /* Exceptions for "BitStream" folder in "BitStreamTests" target */,
-				DB421DC22E4D46FA00AFA331 /* Exceptions for "BitStream" folder in "BitStreamUITests" target */,
-			);
 			path = BitStream;
 			sourceTree = "<group>";
 		};
@@ -126,7 +105,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = DB1625DA2DA187B500B8C714 /* Build configuration list for PBXNativeTarget "BitStream" */;
 			buildPhases = (
-				DB421DC42E4D520500AFA331 /* ShellScript */,
 				DB1625B12DA187B400B8C714 /* Sources */,
 				DB1625B22DA187B400B8C714 /* Frameworks */,
 				DB1625B32DA187B400B8C714 /* Resources */,
@@ -259,26 +237,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
-
-/* Begin PBXShellScriptBuildPhase section */
-		DB421DC42E4D520500AFA331 /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\nif which swiftlint >/dev/null; then\n  swiftlint\nelse\n  echo \"SwiftLint not installed. Install using 'brew install swiftlint'.\"\nfi\n";
-		};
-/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		DB1625B12DA187B400B8C714 /* Sources */ = {

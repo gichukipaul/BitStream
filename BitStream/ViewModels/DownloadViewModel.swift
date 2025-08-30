@@ -12,7 +12,8 @@ import AppKit
 class DownloadViewModel: ObservableObject {
     @Published var videoURL: String = ""
     @Published var downloadMode: DownloadMode = .video
-    @Published var selectedVideoFormat: VideoFormat = .mp4_1080
+    @Published var selectedVideoFormat: VideoFormat = .video_1080
+    @Published var selectedContainerFormat: ContainerFormat = .mkv
     @Published var selectedAudioFormat: AudioFormat = .mp3
     @Published var selectedAudioQuality: AudioQuality = .high
     @Published var outputPath: String = ""
@@ -82,6 +83,7 @@ class DownloadViewModel: ObservableObject {
                 url: videoURL,
                 mode: downloadMode,
                 videoFormat: downloadMode == .video ? selectedVideoFormat : nil,
+                containerFormat: downloadMode == .video ? selectedContainerFormat : nil,
                 audioFormat: downloadMode == .audio ? selectedAudioFormat : nil,
                 audioQuality: downloadMode == .audio ? selectedAudioQuality : nil,
                 outputPath: outputPath,
@@ -128,18 +130,30 @@ class DownloadViewModel: ObservableObject {
         case .success(let message):
             statusMessage = message
             
-            // Create download item for recent downloads
+            // Only create download item if we have a filename from the progress
+            let finalFilename = downloadProgress.filename.isEmpty ?
+            extractFilenameFromURL(videoURL) : downloadProgress.filename
+            
+            // Make sure we have the correct file extension based on container format
+            let fileExtension = downloadMode == .video ? selectedContainerFormat.rawValue : selectedAudioFormat.rawValue
+            let filenameWithExtension = finalFilename.contains(".") ? finalFilename : "\(finalFilename).\(fileExtension)"
+            
             let downloadItem = DownloadItem(
                 url: videoURL,
-                title: downloadProgress.filename.isEmpty ? "Downloaded Media" : downloadProgress.filename,
-                filename: downloadProgress.filename,
-                filePath: outputPath + "/" + downloadProgress.filename,
+                title: finalFilename,
+                filename: filenameWithExtension,
+                filePath: "\(outputPath)/\(filenameWithExtension)",
                 downloadDate: Date(),
                 mode: downloadMode.rawValue,
-                format: downloadMode == .video ? selectedVideoFormat.displayName : selectedAudioFormat.displayName
+                format: downloadMode == .video ?
+                "\(selectedVideoFormat.displayName) → \(selectedContainerFormat.displayName)" :
+                    "\(selectedAudioFormat.displayName) (\(selectedAudioQuality.displayName))"
             )
             
             storageService.addDownload(downloadItem)
+            
+            // Clear the URL field for next download
+            videoURL = ""
             
         case .failure(let error):
             showError(error.localizedDescription)
@@ -147,6 +161,13 @@ class DownloadViewModel: ObservableObject {
         }
     }
     
+    private func extractFilenameFromURL(_ url: String) -> String {
+        // Extract video ID and create a basic filename
+        if let videoID = URLValidator.extractVideoID(from: url) {
+            return "Video_\(videoID)"
+        }
+        return "Downloaded_Media_\(Date().timeIntervalSince1970)"
+    }
     private func showError(_ message: String) {
         alertMessage = message
         showAlert = true
