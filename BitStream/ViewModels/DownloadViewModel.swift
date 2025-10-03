@@ -19,12 +19,11 @@ class DownloadViewModel: ObservableObject {
     @Published var outputPath: String = ""
     @Published var extraArguments: String = ""
     
-    @Published var isDownloading: Bool = false
-    @Published var downloadProgress: DownloadProgress = DownloadProgress()
     @Published var statusMessage: String = ""
     @Published var showAlert: Bool = false
     @Published var alertMessage: String = ""
     
+    private var processedCompletions: Set<UUID> = []
     private let downloadService = DownloadService()
     private let networkService = NetworkService()
     private let storageService = StorageService()
@@ -36,14 +35,6 @@ class DownloadViewModel: ObservableObject {
     }
     
     private func setupBindings() {
-        downloadService.$isDownloading
-            .assign(to: \.isDownloading, on: self)
-            .store(in: &cancellables)
-        
-        downloadService.$progress
-            .assign(to: \.downloadProgress, on: self)
-            .store(in: &cancellables)
-        
         networkService.$isConnected
             .sink { [weak self] isConnected in
                 if !isConnected {
@@ -53,11 +44,53 @@ class DownloadViewModel: ObservableObject {
                 }
             }
             .store(in: &cancellables)
+        
+        // Monitor active downloads for completed items - FIXED LOGIC
+        downloadService.$activeDownloads
+            .sink { [weak self] downloads in
+                for download in downloads {
+                    if case .completed = download.status {
+                        // Check if we haven't already processed this completion - FIXED
+                        if !(self?.processedCompletions.contains(download.id) ?? true) {
+                            self?.addToRecentDownloads(download)
+                            self?.processedCompletions.insert(download.id)
+                        }
+                    }
+                }
+                
+                // Auto-cleanup completed downloads after 10 seconds
+                DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+                    self?.cleanupCompletedDownloads()
+                }
+            }
+            .store(in: &cancellables)
+    }
+    
+    var hasActiveDownloads: Bool {
+        return !downloadService.activeDownloads.filter {
+            switch $0.status {
+            case .queued, .downloading: return true
+            default: return false
+            }
+        }.isEmpty
+    }
+    
+    var downloadingCount: Int {
+        return downloadService.activeDownloads.filter {
+            if case .downloading = $0.status { return true }
+            return false
+        }.count
+    }
+    
+    var queuedCount: Int {
+        return downloadService.activeDownloads.filter {
+            if case .queued = $0.status { return true }
+            return false
+        }.count
     }
     
     func startDownload() {
         Task { @MainActor in
-            // Validate inputs
             guard !videoURL.isEmpty else {
                 showError("Please enter a valid URL")
                 return
@@ -68,19 +101,17 @@ class DownloadViewModel: ObservableObject {
                 return
             }
             
-            // Check network connection
             let isConnected = await networkService.checkConnection()
             guard isConnected else {
                 showError("No internet connection. Please check your network and try again.")
                 return
             }
             
-            statusMessage = "Starting download..."
-            
             let extraArgs = parseExtraArguments()
             
-            downloadService.downloadMedia(
+            let downloadId = downloadService.queueDownload(
                 url: videoURL,
+                title: extractTitleFromURL(videoURL),
                 mode: downloadMode,
                 videoFormat: downloadMode == .video ? selectedVideoFormat : nil,
                 containerFormat: downloadMode == .video ? selectedContainerFormat : nil,
@@ -88,17 +119,23 @@ class DownloadViewModel: ObservableObject {
                 audioQuality: downloadMode == .audio ? selectedAudioQuality : nil,
                 outputPath: outputPath,
                 extraArgs: extraArgs
-            ) { [weak self] result in
-                DispatchQueue.main.async {
-                    self?.handleDownloadResult(result)
-                }
-            }
+            )
+            
+            statusMessage = "Download queued"
+            videoURL = ""
         }
     }
     
-    func cancelDownload() {
-        downloadService.cancelDownload()
-        statusMessage = "Download cancelled"
+    func cancelDownload(_ downloadId: UUID) {
+        downloadService.cancelDownload(downloadId)
+    }
+    
+    func cancelAllDownloads() {
+        downloadService.cancelAllDownloads()
+    }
+    
+    func cleanupCompletedDownloads() {
+        downloadService.removeCompletedDownloads()
     }
     
     func selectOutputFolder() {
@@ -118,6 +155,34 @@ class DownloadViewModel: ObservableObject {
         }
     }
     
+    private func addToRecentDownloads(_ download: ActiveDownload) {
+        let finalFilename = download.progress.filename.isEmpty ?
+            "\(download.displayTitle).\(download.containerFormat?.rawValue ?? "mkv")" :
+            download.progress.filename
+        
+        let downloadItem = DownloadItem(
+            url: download.url,
+            title: finalFilename,
+            filename: finalFilename,
+            filePath: "\(download.outputPath)/\(finalFilename)",
+            downloadDate: Date(),
+            mode: download.mode.rawValue,
+            format: download.mode == .video ?
+                "\(download.videoFormat?.displayName ?? "Unknown") → \(download.containerFormat?.displayName ?? "Unknown")" :
+                "\(download.audioFormat?.displayName ?? "Unknown") (\(download.audioQuality?.displayName ?? "Unknown"))"
+        )
+        
+        print("Adding to recent downloads: \(finalFilename)")
+        storageService.addDownload(downloadItem)
+    }
+    
+    private func extractTitleFromURL(_ url: String) -> String {
+        if let videoID = URLValidator.extractVideoID(from: url) {
+            return "Video_\(videoID)"
+        }
+        return "Download_\(Date().timeIntervalSince1970)"
+    }
+    
     private func parseExtraArguments() -> [String] {
         return extraArguments
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -125,56 +190,21 @@ class DownloadViewModel: ObservableObject {
             .filter { !$0.isEmpty }
     }
     
-    private func handleDownloadResult(_ result: Result<String, Error>) {
-        switch result {
-        case .success(let message):
-            statusMessage = message
-            
-            // Only create download item if we have a filename from the progress
-            let finalFilename = downloadProgress.filename.isEmpty ?
-            extractFilenameFromURL(videoURL) : downloadProgress.filename
-            
-            // Make sure we have the correct file extension based on container format
-            let fileExtension = downloadMode == .video ? selectedContainerFormat.rawValue : selectedAudioFormat.rawValue
-            let filenameWithExtension = finalFilename.contains(".") ? finalFilename : "\(finalFilename).\(fileExtension)"
-            
-            let downloadItem = DownloadItem(
-                url: videoURL,
-                title: finalFilename,
-                filename: filenameWithExtension,
-                filePath: "\(outputPath)/\(filenameWithExtension)",
-                downloadDate: Date(),
-                mode: downloadMode.rawValue,
-                format: downloadMode == .video ?
-                "\(selectedVideoFormat.displayName) → \(selectedContainerFormat.displayName)" :
-                    "\(selectedAudioFormat.displayName) (\(selectedAudioQuality.displayName))"
-            )
-            
-            storageService.addDownload(downloadItem)
-            
-            // Clear the URL field for next download
-            videoURL = ""
-            
-        case .failure(let error):
-            showError(error.localizedDescription)
-            statusMessage = "Download failed"
-        }
-    }
-    
-    private func extractFilenameFromURL(_ url: String) -> String {
-        // Extract video ID and create a basic filename
-        if let videoID = URLValidator.extractVideoID(from: url) {
-            return "Video_\(videoID)"
-        }
-        return "Downloaded_Media_\(Date().timeIntervalSince1970)"
-    }
     private func showError(_ message: String) {
         alertMessage = message
         showAlert = true
     }
     
-    // MARK: - Storage Service Access
+    // MARK: - Service Access
+    var downloadServicePublisher: DownloadService {
+        return downloadService
+    }
+    
     var storageServicePublisher: StorageService {
         return storageService
+    }
+    
+    func debugDownloads() {
+        downloadService.debugActiveDownloads()
     }
 }

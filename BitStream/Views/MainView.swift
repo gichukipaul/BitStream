@@ -106,27 +106,39 @@ struct MainView: View {
             // Download Button
             VStack {
                 Button(action: {
-                    if viewModel.isDownloading {
-                        viewModel.cancelDownload()
-                    } else {
-                        viewModel.startDownload()
-                    }
+                    viewModel.startDownload()
                 }) {
                     HStack {
-                        if viewModel.isDownloading {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                .scaleEffect(0.8)
-                            Text("Cancel")
-                        } else {
-                            Image(systemName: "arrow.down.circle.fill")
-                            Text("Download")
-                        }
+                        Image(systemName: "plus.circle.fill")
+                        Text("Add to Queue")
                     }
                     .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(BorderedProminentButtonStyle())
                 .disabled(viewModel.videoURL.isEmpty || viewModel.outputPath.isEmpty)
+                
+                // Queue Status
+                if viewModel.hasActiveDownloads {
+                    HStack {
+                        Text("Downloading: \(viewModel.downloadingCount)")
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                        
+                        Spacer()
+                        
+                        Text("Queued: \(viewModel.queuedCount)")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                        
+                        Spacer()
+                        
+                        Button("Cancel All") {
+                            viewModel.cancelAllDownloads()
+                        }
+                        .buttonStyle(BorderedButtonStyle())
+                        .font(.caption)
+                    }
+                }
                 
                 if !viewModel.statusMessage.isEmpty {
                     Text(viewModel.statusMessage)
@@ -193,65 +205,11 @@ struct MainView: View {
     // MARK: - Progress Section
     private var progressSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Download Progress")
+            Text("Active Downloads")
                 .font(.headline)
                 .foregroundColor(.primary)
             
-            if viewModel.isDownloading {
-                VStack(spacing: 8) {
-                    // Progress Bar
-                    ProgressView(value: viewModel.downloadProgress.percentage)
-                        .progressViewStyle(LinearProgressViewStyle())
-                    
-                    // Progress Details
-                    HStack {
-                        Text("\(Int(viewModel.downloadProgress.percentage * 100))%")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        Spacer()
-                        
-                        if !viewModel.downloadProgress.speed.isEmpty {
-                            Text(viewModel.downloadProgress.speed)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        if !viewModel.downloadProgress.eta.isEmpty {
-                            Text("ETA: \(viewModel.downloadProgress.eta)")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    
-                    if !viewModel.downloadProgress.filename.isEmpty {
-                        Text(viewModel.downloadProgress.filename)
-                            .font(.caption)
-                            .foregroundColor(.primary)
-                            .lineLimit(2)
-                            .truncationMode(.middle)
-                    }
-                    
-                    if !viewModel.downloadProgress.totalSize.isEmpty {
-                        HStack {
-                            Text("Size: \(viewModel.downloadProgress.totalSize)")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            
-                            Spacer()
-                            
-                            if !viewModel.downloadProgress.downloadedSize.isEmpty {
-                                Text("Downloaded: \(viewModel.downloadProgress.downloadedSize)")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                }
-                .padding()
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(8)
-            } else {
+            if viewModel.downloadServicePublisher.activeDownloads.isEmpty {
                 Text("No active downloads")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
@@ -259,6 +217,18 @@ struct MainView: View {
                     .padding()
                     .background(Color(NSColor.controlBackgroundColor))
                     .cornerRadius(8)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 8) {
+                        ForEach(viewModel.downloadServicePublisher.activeDownloads) { download in
+                            ActiveDownloadRow(
+                                download: download,
+                                onCancel: { viewModel.cancelDownload(download.id) }
+                            )
+                        }
+                    }
+                }
+                .frame(maxHeight: 250)
             }
         }
     }
@@ -301,30 +271,6 @@ struct MainView: View {
                     }
                 }
                 .frame(maxHeight: 300)
-            }
-        }
-    }
-}
-
-
-
-// MARK: - Custom Progress View
-struct ProgressBar: View {
-    @Binding var value: Double
-    
-    var body: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .leading) {
-                Rectangle()
-                    .foregroundColor(Color(NSColor.controlBackgroundColor))
-                    .frame(height: geometry.size.height)
-                    .cornerRadius(geometry.size.height / 2)
-                
-                Rectangle()
-                    .foregroundColor(.blue)
-                    .frame(width: geometry.size.width * CGFloat(value), height: geometry.size.height)
-                    .cornerRadius(geometry.size.height / 2)
-                    .animation(.easeInOut(duration: 0.2), value: value)
             }
         }
     }

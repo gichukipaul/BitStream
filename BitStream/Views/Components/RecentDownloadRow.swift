@@ -48,7 +48,10 @@ struct RecentDownloadRow: View {
             
             // Action buttons
             HStack(spacing: 8) {
-                Button(action: onRevealInFinder) {
+                Button(action: {
+                    print("Reveal in Finder tapped for: \(item.title)")
+                    onRevealInFinder()
+                }) {
                     Image(systemName: "folder.fill")
                         .foregroundColor(.blue)
                 }
@@ -56,7 +59,10 @@ struct RecentDownloadRow: View {
                 .help("Reveal in Finder")
                 .disabled(!item.exists)
                 
-                Button(action: onRemove) {
+                Button(action: {
+                    print("Remove tapped for: \(item.title)")
+                    onRemove()
+                }) {
                     Image(systemName: "trash.fill")
                         .foregroundColor(.red)
                 }

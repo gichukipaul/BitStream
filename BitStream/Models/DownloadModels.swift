@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 // MARK: - Download Types
 enum DownloadMode: String, CaseIterable {
@@ -103,6 +104,55 @@ struct DownloadProgress {
     var totalSize: String = ""
     var downloadedSize: String = ""
     var filename: String = ""
+}
+
+// MARK: - Active Download
+struct ActiveDownload: Identifiable {
+    let id = UUID()
+    let url: String
+    let title: String
+    let mode: DownloadMode
+    let videoFormat: VideoFormat?
+    let containerFormat: ContainerFormat?
+    let audioFormat: AudioFormat?
+    let audioQuality: AudioQuality?
+    let outputPath: String
+    let extraArgs: [String]
+    var progress: DownloadProgress = DownloadProgress()
+    var status: DownloadStatus = .queued
+    let startTime: Date = Date()
+    
+    var displayTitle: String {
+        return title.isEmpty ? "Download \(id.uuidString.prefix(8))" : title
+    }
+}
+
+enum DownloadStatus {
+    case queued
+    case downloading
+    case completed
+    case failed(String)
+    case cancelled
+    
+    var displayText: String {
+        switch self {
+        case .queued: return "Queued"
+        case .downloading: return "Downloading"
+        case .completed: return "Completed"
+        case .failed: return "Failed"
+        case .cancelled: return "Cancelled"
+        }
+    }
+    
+    var color: Color {
+        switch self {
+        case .queued: return .orange
+        case .downloading: return .blue
+        case .completed: return .green
+        case .failed: return .red
+        case .cancelled: return .gray
+        }
+    }
 }
 
 // MARK: - Download Item
