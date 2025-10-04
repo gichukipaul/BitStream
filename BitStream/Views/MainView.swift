@@ -9,26 +9,54 @@ import SwiftUI
 
 struct MainView: View {
     @StateObject private var viewModel = DownloadViewModel()
+    @State private var isHoveringDownloadButton = false
     
     var body: some View {
-        HStack(spacing: 20) {
-            // Left Panel - Download Configuration
-            VStack(alignment: .leading, spacing: 16) {
-                downloadConfigurationSection
-                Spacer()
-            }
-            .frame(maxWidth: 400)
+        ZStack {
+            // Subtle gradient background
+            LinearGradient(
+                colors: [
+                    Color(NSColor.windowBackgroundColor),
+                    Color(NSColor.windowBackgroundColor).opacity(0.95)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
             
-            Divider()
-            
-            // Right Panel - Progress and Recent Downloads
-            VStack(spacing: 16) {
-                progressSection
-                recentDownloadsSection
+            HStack(spacing: 24) {
+                // Left Panel - Download Configuration
+                VStack(alignment: .leading, spacing: 20) {
+                    downloadConfigurationSection
+                    Spacer()
+                }
+                .frame(maxWidth: 420)
+                
+                // Vertical divider with gradient
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.gray.opacity(0.1),
+                                Color.gray.opacity(0.3),
+                                Color.gray.opacity(0.1)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: 1)
+                    .padding(.vertical, 20)
+                
+                // Right Panel - Progress and Recent Downloads
+                VStack(spacing: 20) {
+                    progressSection
+                    recentDownloadsSection
+                }
+                .frame(minWidth: 500)
             }
-            .frame(minWidth: 500)
+            .padding(24)
         }
-        .padding()
         .frame(minWidth: 1000, minHeight: 600)
         .alert("Error", isPresented: $viewModel.showAlert) {
             Button("OK") { }
@@ -39,25 +67,51 @@ struct MainView: View {
     
     // MARK: - Download Configuration Section
     private var downloadConfigurationSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Download Configuration")
-                .font(.headline)
-                .foregroundColor(.primary)
+        VStack(alignment: .leading, spacing: 20) {
+            // Header with icon
+            HStack(spacing: 10) {
+                Image(systemName: "arrow.down.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.blue, .purple],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                
+                Text("Download Configuration")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+            }
             
-            // URL Input
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Media URL")
+            // URL Input Card
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Media URL", systemImage: "link")
                     .font(.subheadline)
+                    .fontWeight(.medium)
                     .foregroundColor(.secondary)
                 
                 TextField("https://youtube.com/watch?v=...", text: $viewModel.videoURL)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .textFieldStyle(.plain)
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color(NSColor.controlBackgroundColor))
+                            .shadow(color: Color.black.opacity(0.05), radius: 2, y: 1)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(viewModel.videoURL.isEmpty ? Color.clear : Color.blue.opacity(0.3), lineWidth: 1)
+                    )
             }
             
-            // Mode Toggle
+            // Mode Toggle Card
             VStack(alignment: .leading, spacing: 8) {
-                Text("Download Mode")
+                Label("Download Mode", systemImage: "square.stack.3d.down.right")
                     .font(.subheadline)
+                    .fontWeight(.medium)
                     .foregroundColor(.secondary)
                 
                 Picker("Mode", selection: $viewModel.downloadMode) {
@@ -66,45 +120,71 @@ struct MainView: View {
                     }
                 }
                 .pickerStyle(SegmentedPickerStyle())
+                .padding(4)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color(NSColor.controlBackgroundColor))
+                        .shadow(color: Color.black.opacity(0.05), radius: 2, y: 1)
+                )
             }
             
             // Format Selection
             formatSelectionView
             
-            // Output Folder
+            // Output Folder Card
             VStack(alignment: .leading, spacing: 8) {
-                Text("Download Folder")
+                Label("Download Folder", systemImage: "folder.badge.plus")
                     .font(.subheadline)
+                    .fontWeight(.medium)
                     .foregroundColor(.secondary)
                 
-                HStack {
+                HStack(spacing: 12) {
+                    Image(systemName: "folder.fill")
+                        .foregroundColor(.blue)
+                        .font(.title3)
+                    
                     Text(viewModel.outputPath.isEmpty ? "No folder selected" : URL(fileURLWithPath: viewModel.outputPath).lastPathComponent)
                         .foregroundColor(viewModel.outputPath.isEmpty ? .secondary : .primary)
                         .truncationMode(.middle)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     
-                    Button("Browse...") {
-                        viewModel.selectOutputFolder()
+                    Button(action: { viewModel.selectOutputFolder() }) {
+                        Text("Browse")
+                            .fontWeight(.medium)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
                     }
-                    .buttonStyle(BorderedButtonStyle())
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
                 }
-                .padding(8)
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(6)
+                .padding(12)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color(NSColor.controlBackgroundColor))
+                        .shadow(color: Color.black.opacity(0.05), radius: 2, y: 1)
+                )
             }
             
-            // Extra Arguments
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Extra Arguments (Optional)")
+            // Extra Arguments Card
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Extra Arguments", systemImage: "terminal")
                     .font(.subheadline)
+                    .fontWeight(.medium)
                     .foregroundColor(.secondary)
                 
                 TextField("--subtitle-lang en --embed-thumbnail", text: $viewModel.extraArguments)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .textFieldStyle(.plain)
+                    .font(.system(.body, design: .monospaced))
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color(NSColor.controlBackgroundColor))
+                            .shadow(color: Color.black.opacity(0.05), radius: 2, y: 1)
+                    )
             }
             
             // Download Button
-            VStack {
+            VStack(spacing: 8) {
                 Button(action: {
                     if viewModel.isDownloading {
                         viewModel.cancelDownload()
@@ -112,27 +192,46 @@ struct MainView: View {
                         viewModel.startDownload()
                     }
                 }) {
-                    HStack {
+                    HStack(spacing: 10) {
                         if viewModel.isDownloading {
                             ProgressView()
                                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                .scaleEffect(0.8)
-                            Text("Cancel")
+                                .scaleEffect(0.9)
+                            Text("Cancel Download")
+                                .fontWeight(.semibold)
                         } else {
                             Image(systemName: "arrow.down.circle.fill")
-                            Text("Download")
+                                .font(.title3)
+                            Text("Start Download")
+                                .fontWeight(.semibold)
                         }
                     }
                     .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
                 }
-                .buttonStyle(BorderedProminentButtonStyle())
+                .buttonStyle(GradientButtonStyle(isEnabled: !viewModel.videoURL.isEmpty && !viewModel.outputPath.isEmpty))
                 .disabled(viewModel.videoURL.isEmpty || viewModel.outputPath.isEmpty)
+                .scaleEffect(isHoveringDownloadButton ? 1.02 : 1.0)
+                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHoveringDownloadButton)
+                .onHover { hovering in
+                    isHoveringDownloadButton = hovering
+                }
                 
                 if !viewModel.statusMessage.isEmpty {
-                    Text(viewModel.statusMessage)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
+                    HStack(spacing: 6) {
+                        Image(systemName: "info.circle.fill")
+                            .font(.caption)
+                        Text(viewModel.statusMessage)
+                            .font(.caption)
+                    }
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule()
+                            .fill(Color(NSColor.controlBackgroundColor))
+                    )
                 }
             }
         }
@@ -140,125 +239,264 @@ struct MainView: View {
     
     // MARK: - Format Selection View
     private var formatSelectionView: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if viewModel.downloadMode == .video {
-                Text("Video Quality")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                
-                Picker("Video Format", selection: $viewModel.selectedVideoFormat) {
-                    ForEach(VideoFormat.allCases) { format in
-                        Text(format.displayName).tag(format)
-                    }
-                }
-                .pickerStyle(MenuPickerStyle())
-                
-                Text("Container Format")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                
-                Picker("Container Format", selection: $viewModel.selectedContainerFormat) {
-                    ForEach(ContainerFormat.allCases) { format in
-                        Text(format.displayName).tag(format)
-                    }
-                }
-                .pickerStyle(MenuPickerStyle())
-                
-            } else {
-                Text("Audio Format & Quality")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                
-                HStack {
-                    Picker("Audio Format", selection: $viewModel.selectedAudioFormat) {
-                        ForEach(AudioFormat.allCases) { format in
-                            Text(format.displayName).tag(format)
+        VStack(alignment: .leading, spacing: 12) {
+            Label(
+                viewModel.downloadMode == .video ? "Quality & Format" : "Audio Settings",
+                systemImage: viewModel.downloadMode == .video ? "film" : "music.note"
+            )
+            .font(.subheadline)
+            .fontWeight(.medium)
+            .foregroundColor(.secondary)
+            
+            VStack(spacing: 12) {
+                if viewModel.downloadMode == .video {
+                    // Video Quality
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Video Quality")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Picker("Video Format", selection: $viewModel.selectedVideoFormat) {
+                            ForEach(VideoFormat.allCases) { format in
+                                Text(format.displayName).tag(format)
+                            }
                         }
+                        .pickerStyle(MenuPickerStyle())
+                        .padding(8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color(NSColor.controlBackgroundColor))
+                        )
                     }
-                    .pickerStyle(MenuPickerStyle())
-                    .frame(maxWidth: .infinity)
                     
-                    Picker("Quality", selection: $viewModel.selectedAudioQuality) {
-                        ForEach(AudioQuality.allCases) { quality in
-                            Text(quality.displayName).tag(quality)
+                    // Container Format
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Container Format")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Picker("Container Format", selection: $viewModel.selectedContainerFormat) {
+                            ForEach(ContainerFormat.allCases) { format in
+                                Text(format.displayName).tag(format)
+                            }
                         }
+                        .pickerStyle(MenuPickerStyle())
+                        .padding(8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color(NSColor.controlBackgroundColor))
+                        )
                     }
-                    .pickerStyle(MenuPickerStyle())
-                    .frame(maxWidth: .infinity)
+                } else {
+                    HStack(spacing: 12) {
+                        // Audio Format
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Format")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            Picker("Audio Format", selection: $viewModel.selectedAudioFormat) {
+                                ForEach(AudioFormat.allCases) { format in
+                                    Text(format.displayName).tag(format)
+                                }
+                            }
+                            .pickerStyle(MenuPickerStyle())
+                            .padding(8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color(NSColor.controlBackgroundColor))
+                            )
+                        }
+                        .frame(maxWidth: .infinity)
+                        
+                        // Audio Quality
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Quality")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            Picker("Quality", selection: $viewModel.selectedAudioQuality) {
+                                ForEach(AudioQuality.allCases) { quality in
+                                    Text(quality.displayName).tag(quality)
+                                }
+                            }
+                            .pickerStyle(MenuPickerStyle())
+                            .padding(8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color(NSColor.controlBackgroundColor))
+                            )
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
                 }
             }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color(NSColor.controlBackgroundColor))
+                    .shadow(color: Color.black.opacity(0.05), radius: 2, y: 1)
+            )
         }
     }
     
     // MARK: - Progress Section
     private var progressSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Download Progress")
-                .font(.headline)
-                .foregroundColor(.primary)
+            HStack(spacing: 10) {
+                Image(systemName: "chart.line.uptrend.xyaxis")
+                    .font(.title3)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.green, .blue],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                
+                Text("Download Progress")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                if viewModel.isDownloading {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 8, height: 8)
+                            .opacity(0.8)
+                            .scaleEffect(1.0)
+                            .animation(
+                                Animation.easeInOut(duration: 1.0).repeatForever(autoreverses: true),
+                                value: viewModel.isDownloading
+                            )
+                        Text("Active")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.green)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule()
+                            .fill(Color.green.opacity(0.1))
+                    )
+                }
+            }
             
             if viewModel.isDownloading {
-                VStack(spacing: 8) {
-                    // Progress Bar
-                    ProgressView(value: viewModel.downloadProgress.percentage)
-                        .progressViewStyle(LinearProgressViewStyle())
-                    
-                    // Progress Details
-                    HStack {
-                        Text("\(Int(viewModel.downloadProgress.percentage * 100))%")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                VStack(spacing: 16) {
+                    // Enhanced Progress Bar
+                    VStack(spacing: 8) {
+                        CustomProgressView(value: viewModel.downloadProgress.percentage)
                         
-                        Spacer()
-                        
-                        if !viewModel.downloadProgress.speed.isEmpty {
-                            Text(viewModel.downloadProgress.speed)
-                                .font(.caption)
+                        HStack {
+                            Text("\(Int(viewModel.downloadProgress.percentage * 100))%")
+                                .font(.system(.headline, design: .rounded))
+                                .fontWeight(.bold)
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [.blue, .purple],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                            
+                            Spacer()
+                            
+                            if !viewModel.downloadProgress.speed.isEmpty {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "speedometer")
+                                        .font(.caption)
+                                    Text(viewModel.downloadProgress.speed)
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                }
+                                .foregroundColor(.blue)
+                            }
+                            
+                            if !viewModel.downloadProgress.eta.isEmpty {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "clock")
+                                        .font(.caption)
+                                    Text(viewModel.downloadProgress.eta)
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                }
                                 .foregroundColor(.secondary)
-                        }
-                        
-                        if !viewModel.downloadProgress.eta.isEmpty {
-                            Text("ETA: \(viewModel.downloadProgress.eta)")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                            }
                         }
                     }
                     
                     if !viewModel.downloadProgress.filename.isEmpty {
-                        Text(viewModel.downloadProgress.filename)
-                            .font(.caption)
-                            .foregroundColor(.primary)
-                            .lineLimit(2)
-                            .truncationMode(.middle)
+                        HStack(spacing: 8) {
+                            Image(systemName: "doc.fill")
+                                .foregroundColor(.blue)
+                            Text(viewModel.downloadProgress.filename)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .lineLimit(2)
+                                .truncationMode(.middle)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     
                     if !viewModel.downloadProgress.totalSize.isEmpty {
-                        HStack {
-                            Text("Size: \(viewModel.downloadProgress.totalSize)")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                        HStack(spacing: 20) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.down.circle.fill")
+                                    .foregroundColor(.green)
+                                    .font(.caption)
+                                Text(viewModel.downloadProgress.downloadedSize.isEmpty ? "—" : viewModel.downloadProgress.downloadedSize)
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                            }
+                            
+                            HStack(spacing: 6) {
+                                Image(systemName: "externaldrive.fill")
+                                    .foregroundColor(.blue)
+                                    .font(.caption)
+                                Text(viewModel.downloadProgress.totalSize)
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                            }
                             
                             Spacer()
-                            
-                            if !viewModel.downloadProgress.downloadedSize.isEmpty {
-                                Text("Downloaded: \(viewModel.downloadProgress.downloadedSize)")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
                         }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
+                        )
                     }
                 }
-                .padding()
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(8)
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(NSColor.controlBackgroundColor))
+                        .shadow(color: Color.blue.opacity(0.1), radius: 8, x: 0, y: 4)
+                )
             } else {
-                Text("No active downloads")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding()
-                    .background(Color(NSColor.controlBackgroundColor))
-                    .cornerRadius(8)
+                VStack(spacing: 12) {
+                    Image(systemName: "tray")
+                        .font(.system(size: 40))
+                        .foregroundColor(.secondary.opacity(0.5))
+                    
+                    Text("No active downloads")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 40)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(NSColor.controlBackgroundColor))
+                        .shadow(color: Color.black.opacity(0.03), radius: 4, y: 2)
+                )
             }
         }
     }
@@ -267,30 +505,64 @@ struct MainView: View {
     private var recentDownloadsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Recent Downloads")
-                    .font(.headline)
-                    .foregroundColor(.primary)
+                HStack(spacing: 10) {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.title3)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.orange, .red],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    
+                    Text("Recent Downloads")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                }
                 
                 Spacer()
                 
-                Button("Clear All") {
+                Button(action: {
                     viewModel.storageServicePublisher.clearRecentDownloads()
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "trash")
+                            .font(.caption)
+                        Text("Clear All")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
                 }
-                .buttonStyle(BorderedButtonStyle())
+                .buttonStyle(.bordered)
+                .controlSize(.small)
                 .disabled(viewModel.storageServicePublisher.recentDownloads.isEmpty)
             }
             
             if viewModel.storageServicePublisher.recentDownloads.isEmpty {
-                Text("No recent downloads")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding()
-                    .background(Color(NSColor.controlBackgroundColor))
-                    .cornerRadius(8)
+                VStack(spacing: 12) {
+                    Image(systemName: "arrow.down.doc")
+                        .font(.system(size: 40))
+                        .foregroundColor(.secondary.opacity(0.5))
+                    
+                    Text("No recent downloads")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 40)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(NSColor.controlBackgroundColor))
+                        .shadow(color: Color.black.opacity(0.03), radius: 4, y: 2)
+                )
             } else {
                 ScrollView {
-                    LazyVStack(spacing: 8) {
+                    LazyVStack(spacing: 10) {
                         ForEach(viewModel.storageServicePublisher.recentDownloads) { item in
                             RecentDownloadRow(
                                 item: item,
@@ -299,6 +571,7 @@ struct MainView: View {
                             )
                         }
                     }
+                    .padding(2)
                 }
                 .frame(maxHeight: 300)
             }
@@ -306,27 +579,39 @@ struct MainView: View {
     }
 }
 
-
-
-// MARK: - Custom Progress View
-struct ProgressBar: View {
-    @Binding var value: Double
+// MARK: - Gradient Button Style
+struct GradientButtonStyle: ButtonStyle {
+    let isEnabled: Bool
     
-    var body: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .leading) {
-                Rectangle()
-                    .foregroundColor(Color(NSColor.controlBackgroundColor))
-                    .frame(height: geometry.size.height)
-                    .cornerRadius(geometry.size.height / 2)
-                
-                Rectangle()
-                    .foregroundColor(.blue)
-                    .frame(width: geometry.size.width * CGFloat(value), height: geometry.size.height)
-                    .cornerRadius(geometry.size.height / 2)
-                    .animation(.easeInOut(duration: 0.2), value: value)
-            }
-        }
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundColor(.white)
+            .background(
+                Group {
+                    if isEnabled {
+                        LinearGradient(
+                            colors: [
+                                Color.blue,
+                                Color.purple
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                        .opacity(configuration.isPressed ? 0.8 : 1.0)
+                    } else {
+                        Color.gray.opacity(0.3)
+                    }
+                }
+            )
+            .cornerRadius(12)
+            .shadow(
+                color: isEnabled ? Color.blue.opacity(0.3) : Color.clear,
+                radius: configuration.isPressed ? 4 : 8,
+                x: 0,
+                y: configuration.isPressed ? 2 : 4
+            )
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
     }
 }
 
