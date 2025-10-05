@@ -41,7 +41,7 @@ A modern, native macOS application for downloading and managing media content. B
 - Quick actions:
   - Reveal in Finder
   - Remove from history
-  - Clear all option
+  - Clear all options
 
 **⚙️ Advanced Configuration**
 - Custom output folder selection
@@ -130,7 +130,7 @@ A modern, native macOS application for downloading and managing media content. B
 ### High Priority
 
 **1. Queue System** 🔄
-- Add multiple URLs to download queue
+- Add multiple URLs to the download queue
 - Sequential or parallel downloads (user-configurable)
 - Pause/resume individual items
 - Drag-and-drop queue reordering
@@ -138,7 +138,7 @@ A modern, native macOS application for downloading and managing media content. B
 
 **2. Playlist & Channel Support** 📋
 - Download entire playlists or channels
-- Select specific videos from playlist
+- Select specific videos from the playlist
 - Auto-numbering to maintain order
 - Show total playlist size before downloading
 - Bulk format selection for playlists
@@ -208,21 +208,20 @@ BitStream prioritizes:
 
 ## 🤝 Contributing
 
-This is a professional-grade solo dev project demonstrating real-world workflows including:
+This is a professional-grade solo dev project demonstrating real-world workflows, including:
 - Git flow and version control
 - Modular architecture
 - Code organization and best practices
 - Documentation standards
 
-Contributions, suggestions, and feedback are welcome!
+Contributions, suggestions, and feedback are welcome
 
 ---
 
 ## 📄 License
 
 MIT License © 2025
-
-See the LICENSE file for details.
+See the [MIT License](LICENSE) file for details.
 
 ---
 
