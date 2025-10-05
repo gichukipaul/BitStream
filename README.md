@@ -5,10 +5,12 @@ A modern, native macOS application for downloading and managing media content. B
 ---
 
 ## 📸 Preview
-
-*Coming Soon: Screenshots showcasing the modern gradient UI, progress tracking, and download management*
-
----
+<div style="display:flex; justify-content:center;">
+  <img src="https://github.com/gichukipaul/BitStream/blob/main/.screenshots/BitStream-light.png" alt="Screenshots showcasing the modern gradient UI, progress tracking, and download management" width="850"/>
+</div>
+<div style="display:flex; justify-content:center;">
+  <img src="https://github.com/gichukipaul/BitStream/blob/main/.screenshots/BitStream-dark.png" alt="Screenshots showcasing the modern gradient UI, progress tracking, and download management" width="850"/>
+</div>
 
 ## ✨ Features
 
