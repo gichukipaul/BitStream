@@ -14,7 +14,8 @@ struct RecentDownloadsView: View {
         VStack(alignment: .leading, spacing: 12) {
             headerSection
             
-            if viewModel.storageServicePublisher.recentDownloads.isEmpty {
+            //Access recentDownloads directly from viewModel
+            if viewModel.recentDownloads.isEmpty {
                 emptyStateView
             } else {
                 downloadsListView
@@ -51,7 +52,8 @@ struct RecentDownloadsView: View {
     // MARK: - Clear All Button
     private var clearAllButton: some View {
         Button(action: {
-            viewModel.storageServicePublisher.clearRecentDownloads()
+            // FIXED: Call viewModel method directly
+            viewModel.clearRecentDownloads()
         }) {
             HStack(spacing: 4) {
                 Image(systemName: "trash")
@@ -65,18 +67,20 @@ struct RecentDownloadsView: View {
         }
         .buttonStyle(.bordered)
         .controlSize(.small)
-        .disabled(viewModel.storageServicePublisher.recentDownloads.isEmpty)
+        .disabled(viewModel.recentDownloads.isEmpty)
     }
     
     // MARK: - Downloads List View
     private var downloadsListView: some View {
         ScrollView {
             LazyVStack(spacing: 10) {
-                ForEach(viewModel.storageServicePublisher.recentDownloads) { item in
+                //Access recentDownloads directly from viewModel
+                ForEach(viewModel.recentDownloads) { item in
                     RecentDownloadRow(
                         item: item,
-                        onRevealInFinder: { viewModel.storageServicePublisher.revealInFinder(item) },
-                        onRemove: { viewModel.storageServicePublisher.removeDownload(item) }
+                        //Call viewModel methods directly
+                        onRevealInFinder: { viewModel.revealInFinder(item) },
+                        onRemove: { viewModel.removeDownload(item) }
                     )
                 }
             }

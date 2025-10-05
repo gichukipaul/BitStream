@@ -74,7 +74,7 @@ struct DownloadConfigurationView: View {
                 .fontWeight(.medium)
                 .foregroundColor(.secondary)
             
-            Picker("Mode", selection: $viewModel.downloadMode) {
+            Picker("", selection: $viewModel.downloadMode) {
                 ForEach(DownloadMode.allCases, id: \.self) { mode in
                     Text(mode.rawValue).tag(mode)
                 }

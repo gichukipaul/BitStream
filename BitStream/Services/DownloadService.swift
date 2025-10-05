@@ -15,6 +15,7 @@ class DownloadService: ObservableObject {
     
     private var currentProcess: Process?
     private var cancellables = Set<AnyCancellable>()
+    private var actualFilePath: String = ""
     
     func downloadMedia(
         url: String,
@@ -25,7 +26,7 @@ class DownloadService: ObservableObject {
         audioQuality: AudioQuality? = nil,
         outputPath: String,
         extraArgs: [String] = [],
-        completion: @escaping (Result<String, Error>) -> Void
+        completion: @escaping (Result<(String, String), Error>) -> Void  // Changed to return tuple
     ) {
         guard !isDownloading else {
             completion(.failure(DownloadError.alreadyDownloading))
@@ -38,7 +39,7 @@ class DownloadService: ObservableObject {
             return
         }
         
-        // Debug logging (remove the permission setting code)
+        // Debug logging
         print("yt-dlp path: \(ytdlpPath)")
         print("File exists: \(FileManager.default.fileExists(atPath: ytdlpPath))")
         print("Is executable: \(FileManager.default.isExecutableFile(atPath: ytdlpPath))")
@@ -46,6 +47,7 @@ class DownloadService: ObservableObject {
         isDownloading = true
         progress = DownloadProgress()
         logs.removeAll()
+        actualFilePath = ""  // Reset the actual file path
         
         let process = Process()
         currentProcess = process
@@ -81,11 +83,12 @@ class DownloadService: ObservableObject {
                 DispatchQueue.main.async {
                     print("yt-dlp stdout: \(output)")
                     self?.processOutput(output)
+                    self?.captureFilename(from: output)  // Capture actual filename
                 }
             }
         }
         
-        // Handle errors - capture error output
+        // Handle errors
         errorPipe.fileHandleForReading.readabilityHandler = { handle in
             let data = handle.availableData
             if !data.isEmpty, let error = String(data: data, encoding: .utf8) {
@@ -98,20 +101,24 @@ class DownloadService: ObservableObject {
         
         process.terminationHandler = { [weak self] process in
             DispatchQueue.main.async {
-                self?.isDownloading = false
-                self?.currentProcess = nil
+                guard let self = self else { return }
+                
+                self.isDownloading = false
+                self.currentProcess = nil
                 
                 outputPipe.fileHandleForReading.readabilityHandler = nil
                 errorPipe.fileHandleForReading.readabilityHandler = nil
                 
                 if process.terminationStatus == 0 {
-                    completion(.success("Download completed successfully"))
+                    // Return both message and actual file path
+                    let filePath = self.actualFilePath.isEmpty ? outputPath : self.actualFilePath
+                    completion(.success(("Download completed successfully", filePath)))
                 } else {
                     print("yt-dlp failed with exit code: \(process.terminationStatus)")
                     print("Error output: \(errorOutput)")
                     let errorMessage = errorOutput.isEmpty ?
-                    "Download failed with exit code: \(process.terminationStatus)" :
-                    errorOutput
+                        "Download failed with exit code: \(process.terminationStatus)" :
+                        errorOutput
                     completion(.failure(DownloadError.downloadFailedWithMessage(errorMessage)))
                 }
             }
@@ -166,7 +173,6 @@ class DownloadService: ObservableObject {
                 args.append(contentsOf: ["-f", videoFormat.rawValue])
             }
             
-            // Add container format for video downloads
             if let containerFormat = containerFormat {
                 args.append(contentsOf: ["--merge-output-format", containerFormat.rawValue])
             }
@@ -199,10 +205,67 @@ class DownloadService: ObservableObject {
         }
     }
     
+    private func captureFilename(from output: String) {
+        let lines = output.components(separatedBy: .newlines)
+        
+        for line in lines {
+            // Pattern 1: [download] Destination: /path/to/file.ext
+            if line.contains("[download] Destination:") {
+                let components = line.components(separatedBy: "[download] Destination: ")
+                if components.count > 1 {
+                    let path = components[1].trimmingCharacters(in: .whitespacesAndNewlines)
+                    actualFilePath = path
+                    print("📁 Captured destination path: \(path)")
+                }
+            }
+            
+            // Pattern 2: [Merger] Merging formats into "/path/to/file.ext"
+            else if line.contains("[Merger] Merging formats into") {
+                if let start = line.range(of: "\""),
+                   let end = line.range(of: "\"", options: .backwards),
+                   start != end {
+                    let path = String(line[start.upperBound..<end.lowerBound])
+                    actualFilePath = path
+                    print("📁 Captured merged file path: \(path)")
+                }
+            }
+            
+            // Pattern 3: [download] /path/to/file.ext has already been downloaded
+            else if line.contains("has already been downloaded") {
+                let components = line.components(separatedBy: "[download] ")
+                if components.count > 1 {
+                    let pathPart = components[1].components(separatedBy: " has already")[0]
+                    let path = pathPart.trimmingCharacters(in: .whitespacesAndNewlines)
+                    actualFilePath = path
+                    print("📁 Captured existing file path: \(path)")
+                }
+            }
+            
+            // Pattern 4: [ExtractAudio] Destination: /path/to/file.ext
+            else if line.contains("[ExtractAudio] Destination:") {
+                let components = line.components(separatedBy: "[ExtractAudio] Destination: ")
+                if components.count > 1 {
+                    let path = components[1].trimmingCharacters(in: .whitespacesAndNewlines)
+                    actualFilePath = path
+                    print("📁 Captured audio extraction path: \(path)")
+                }
+            }
+            
+            // Pattern 5: [ffmpeg] Destination: /path/to/file.ext
+            else if line.contains("[ffmpeg] Destination:") {
+                let components = line.components(separatedBy: "[ffmpeg] Destination: ")
+                if components.count > 1 {
+                    let path = components[1].trimmingCharacters(in: .whitespacesAndNewlines)
+                    actualFilePath = path
+                    print("📁 Captured ffmpeg destination path: \(path)")
+                }
+            }
+        }
+    }
+    
     private func parseProgress(from output: String) -> DownloadProgress? {
         var progressInfo = progress
         
-        // Parse different types of output
         let lines = output.components(separatedBy: .newlines)
         
         for line in lines {
@@ -231,24 +294,37 @@ class DownloadService: ObservableObject {
                 }
             }
             
-            // Parse destination/filename
+            // Parse destination/filename for display
             if line.contains("Destination:") {
                 let filename = line.replacingOccurrences(of: "[download] Destination: ", with: "")
+                    .replacingOccurrences(of: "[ExtractAudio] Destination: ", with: "")
+                    .replacingOccurrences(of: "[ffmpeg] Destination: ", with: "")
                     .trimmingCharacters(in: .whitespacesAndNewlines)
-                progressInfo.filename = filename
+                
+                // Extract just the filename for display
+                if let fileURL = URL(string: "file://\(filename)") {
+                    progressInfo.filename = fileURL.lastPathComponent
+                } else {
+                    progressInfo.filename = (filename as NSString).lastPathComponent
+                }
             }
             
             // Parse merger info (final filename)
             if line.contains("[Merger] Merging formats into") {
                 if let range = line.range(of: "\".*\"", options: .regularExpression) {
-                    let filename = String(line[range]).replacingOccurrences(of: "\"", with: "")
-                    progressInfo.filename = filename
+                    let fullPath = String(line[range]).replacingOccurrences(of: "\"", with: "")
+                    if let fileURL = URL(string: "file://\(fullPath)") {
+                        progressInfo.filename = fileURL.lastPathComponent
+                    } else {
+                        progressInfo.filename = (fullPath as NSString).lastPathComponent
+                    }
                 }
             }
         }
         
         return progressInfo
     }
+    
     func cancelDownload() {
         currentProcess?.terminate()
         isDownloading = false

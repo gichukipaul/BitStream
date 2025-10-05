@@ -25,6 +25,9 @@ class DownloadViewModel: ObservableObject {
     @Published var showAlert: Bool = false
     @Published var alertMessage: String = ""
     
+    //Expose recentDownloads directly so SwiftUI can observe it
+    @Published var recentDownloads: [DownloadItem] = []
+    
     private let downloadService = DownloadService()
     private let networkService = NetworkService()
     private let storageService = StorageService()
@@ -52,6 +55,11 @@ class DownloadViewModel: ObservableObject {
                     self?.statusMessage = ""
                 }
             }
+            .store(in: &cancellables)
+        
+        // Bind storageService.recentDownloads to our published property
+        storageService.$recentDownloads
+            .assign(to: \.recentDownloads, on: self)
             .store(in: &cancellables)
     }
     
@@ -118,6 +126,19 @@ class DownloadViewModel: ObservableObject {
         }
     }
     
+    // Add wrapper methods for storage operations
+    func clearRecentDownloads() {
+        storageService.clearRecentDownloads()
+    }
+    
+    func removeDownload(_ item: DownloadItem) {
+        storageService.removeDownload(item)
+    }
+    
+    func revealInFinder(_ item: DownloadItem) {
+        storageService.revealInFinder(item)
+    }
+    
     private func parseExtraArguments() -> [String] {
         return extraArguments
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -125,34 +146,29 @@ class DownloadViewModel: ObservableObject {
             .filter { !$0.isEmpty }
     }
     
-    private func handleDownloadResult(_ result: Result<String, Error>) {
+    private func handleDownloadResult(_ result: Result<(String, String), Error>) {
         switch result {
-        case .success(let message):
+        case .success(let (message, actualFilePath)):
             statusMessage = message
             
-            // Only create download item if we have a filename from the progress
-            let finalFilename = downloadProgress.filename.isEmpty ?
-            extractFilenameFromURL(videoURL) : downloadProgress.filename
-            
-            // Make sure we have the correct file extension based on container format
-            let fileExtension = downloadMode == .video ? selectedContainerFormat.rawValue : selectedAudioFormat.rawValue
-            let filenameWithExtension = finalFilename.contains(".") ? finalFilename : "\(finalFilename).\(fileExtension)"
+            // Extract just the filename from the full path
+            let fileURL = URL(fileURLWithPath: actualFilePath)
+            let actualFilename = fileURL.lastPathComponent
+            let actualTitle = fileURL.deletingPathExtension().lastPathComponent
             
             let downloadItem = DownloadItem(
                 url: videoURL,
-                title: finalFilename,
-                filename: filenameWithExtension,
-                filePath: "\(outputPath)/\(filenameWithExtension)",
+                title: actualTitle,  // Use the real title
+                filename: actualFilename,  // Use the real filename
+                filePath: actualFilePath,  // Use the ACTUAL path from yt-dlp
                 downloadDate: Date(),
                 mode: downloadMode.rawValue,
                 format: downloadMode == .video ?
-                "\(selectedVideoFormat.displayName) → \(selectedContainerFormat.displayName)" :
+                    "\(selectedVideoFormat.displayName) → \(selectedContainerFormat.displayName)" :
                     "\(selectedAudioFormat.displayName) (\(selectedAudioQuality.displayName))"
             )
             
             storageService.addDownload(downloadItem)
-            
-            // Clear the URL field for next download
             videoURL = ""
             
         case .failure(let error):
@@ -168,13 +184,9 @@ class DownloadViewModel: ObservableObject {
         }
         return "Downloaded_Media_\(Date().timeIntervalSince1970)"
     }
+    
     private func showError(_ message: String) {
         alertMessage = message
         showAlert = true
-    }
-    
-    // MARK: - Storage Service Access
-    var storageServicePublisher: StorageService {
-        return storageService
     }
 }
